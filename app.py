@@ -39,7 +39,7 @@ def main():
         with col_main:
             st.header("Live Traffic Prediction")
             if st.button(
-                "Check Live Traffic Status", type="primary", use_container_width=True
+                "Check Live Traffic Status", type="primary", width="stretch"
             ):
                 tomtom_key = os.getenv("TOMTOM_API_KEY")
                 weather_key = os.getenv("OPENWEATHER_API_KEY")
@@ -201,29 +201,35 @@ def main():
 
             if "timestamp" in df.columns:
                 df["timestamp"] = df["timestamp"].astype(str)
-                df["timestamp"] = pd.to_datetime(
-                    df["timestamp"], format="mixed", errors="coerce"
-                )
-                df = df.sort_values("timestamp")
 
                 st.markdown("### 🚗 Current Speed Over Time")
-                df_indexed = df.set_index("timestamp")
-                st.line_chart(df_indexed["currentSpeed"])
+                df_chart = df[["timestamp", "currentSpeed"]].copy()
+                df_chart = df_chart.sort_values("timestamp")
+                st.line_chart(df_chart.set_index("timestamp"))
 
                 if "congestion_ratio" in df.columns:
                     st.markdown("### 🌡️ Temperature vs Congestion Ratio")
-                    st.scatter_chart(
-                        df, x="temp", y="congestion_ratio", color="traffic_state"
+                    scatter_df = df[
+                        ["temp", "congestion_ratio", "traffic_state"]
+                    ].copy()
+                    scatter_df["temp"] = pd.to_numeric(
+                        scatter_df["temp"], errors="coerce"
                     )
+                    scatter_df["congestion_ratio"] = pd.to_numeric(
+                        scatter_df["congestion_ratio"], errors="coerce"
+                    )
+                    st.scatter_chart(scatter_df)
 
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown("### 📊 Data Statistics")
-                st.write(df.describe())
+                st.dataframe(df.describe(), use_container_width=True)
             with col2:
                 if "traffic_state" in df.columns:
                     st.markdown("### 🏷️ Traffic State Distribution")
-                    st.write(df["traffic_state"].value_counts())
+                    st.dataframe(
+                        df["traffic_state"].value_counts(), use_container_width=True
+                    )
 
         except FileNotFoundError:
             st.warning("No historical data found. Run the data fetcher first!")
