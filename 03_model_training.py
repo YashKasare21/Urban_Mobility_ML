@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.linear_model import LogisticRegression
 from sklearn.mixture import GaussianMixture
@@ -50,13 +50,22 @@ def main():
     print("Features scaled using StandardScaler")
 
     print("\n" + "=" * 60)
-    print("LO3: LINEAR MODEL - LOGISTIC REGRESSION")
+    print("LO3: LINEAR MODEL - LOGISTIC REGRESSION (GridSearchCV)")
     print("=" * 60)
-    lr_model = LogisticRegression(random_state=42, max_iter=1000)
-    lr_model.fit(X_train_scaled, y_train)
-    y_pred_lr = lr_model.predict(X_test_scaled)
+    param_grid = {"C": [0.01, 0.1, 1, 10, 100], "solver": ["lbfgs", "liblinear"]}
+    lr_base = LogisticRegression(random_state=42, max_iter=1000)
+    grid_search = GridSearchCV(lr_base, param_grid, cv=5, scoring="accuracy", n_jobs=-1)
+    grid_search.fit(X_train_scaled, y_train)
+
+    print(f"Best Parameters: {grid_search.best_params_}")
+    print(
+        f"Best Cross-Validated Accuracy: {grid_search.best_score_:.4f} ({grid_search.best_score_ * 100:.2f}%)"
+    )
+
+    best_estimator = grid_search.best_estimator_
+    y_pred_lr = best_estimator.predict(X_test_scaled)
     lr_accuracy = accuracy_score(y_test, y_pred_lr)
-    print(f"Logistic Regression Accuracy: {lr_accuracy:.4f} ({lr_accuracy * 100:.2f}%)")
+    print(f"Test Set Accuracy: {lr_accuracy:.4f} ({lr_accuracy * 100:.2f}%)")
 
     print("\n" + "=" * 60)
     print("LO4: CLUSTERING - GAUSSIAN MIXTURE MODEL")
@@ -105,8 +114,8 @@ def main():
     os.makedirs("models", exist_ok=True)
 
     if lr_accuracy >= mlp_accuracy:
-        best_model = lr_model
-        best_name = "Logistic Regression"
+        best_model = best_estimator
+        best_name = "Logistic Regression (GridSearchCV)"
     else:
         best_model = mlp
         best_name = "MLP Perceptron"
